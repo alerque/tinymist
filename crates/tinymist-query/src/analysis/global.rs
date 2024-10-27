@@ -34,8 +34,8 @@ use crate::syntax::{
 };
 use crate::upstream::{tooltip_, Tooltip};
 use crate::{
-    lsp_to_typst, path_to_url, typst_to_lsp, LspPosition, LspRange, PositionEncoding, TypstRange,
-    VersionedDocument,
+    lsp_to_typst, path_to_url, typst_to_lsp, LspPosition, LspRange, PositionEncoding,
+    SemanticTokenContext, TypstRange, VersionedDocument,
 };
 
 use super::{analyze_expr_, definition, Definition};
@@ -53,6 +53,7 @@ pub struct Analysis {
     pub workers: Arc<AnalysisGlobalWorkers>,
     /// The global cache grid for analysis.
     pub cache_grid: Arc<Mutex<AnalysisGlobalCacheGrid>>,
+    pub workers: AnalysisGlobalWorkers,
 }
 
 impl Analysis {
@@ -593,8 +594,9 @@ impl SharedContext {
         route: &mut Processing<Option<Arc<LazyHash<LexicalScope>>>>,
     ) -> Arc<ExprInfo> {
         use crate::syntax::expr_of;
+        let guard = self.query_stat(source.id(), "expr_stage");
         self.slot.expr_stage.compute(hash128(&source), |prev| {
-            expr_of(self.clone(), source.clone(), route, prev)
+            expr_of(self.clone(), source.clone(), route, guard, prev)
         })
     }
 
@@ -625,6 +627,7 @@ impl SharedContext {
         use crate::analysis::type_check;
 
         let ei = self.expr_stage(source);
+        let guard = self.query_stat(source.id(), "type_check");
         self.slot.type_check.compute(hash128(&ei), |prev| {
             let cache_hit = prev.and_then(|prev| {
                 // todo: recursively check changed scheme type
@@ -639,6 +642,7 @@ impl SharedContext {
                 return prev.clone();
             }
 
+            guard.miss();
             type_check(self.clone(), ei, route)
         })
     }
