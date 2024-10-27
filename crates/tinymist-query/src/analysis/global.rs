@@ -53,7 +53,8 @@ pub struct Analysis {
     pub workers: Arc<AnalysisGlobalWorkers>,
     /// The global cache grid for analysis.
     pub cache_grid: Arc<Mutex<AnalysisGlobalCacheGrid>>,
-    pub workers: AnalysisGlobalWorkers,
+    /// The semantic token context.
+    pub tokens_ctx: Arc<SemanticTokenContext>,
 }
 
 impl Analysis {
