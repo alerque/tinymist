@@ -1,6 +1,6 @@
 //! The actor that runs user actions.
 
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use anyhow::bail;
 use base64::Engine;
@@ -45,7 +45,7 @@ impl UserActionTask {
     pub async fn trace_main(
         client: LspClient,
         state: &mut LanguageState,
-        w: &LspWorld,
+        w: &Arc<LspWorld>,
         rpc_kind: String,
         req_id: RequestId,
     ) -> ! {
@@ -157,7 +157,7 @@ async fn run_trace_program(params: TraceParams) -> anyhow::Result<JsonValue> {
 async fn trace_main(
     client: LspClient,
     state: &mut LanguageState,
-    w: &LspWorld,
+    w: &Arc<LspWorld>,
     rpc_kind: String,
     req_id: RequestId,
 ) -> ! {

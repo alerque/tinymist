@@ -4,13 +4,14 @@ use std::ops::Range;
 
 use ecow::{eco_format, EcoString};
 use if_chain::if_chain;
+use reflexo_typst::font::FontResolver;
+use reflexo_typst::package::PackageRegistry;
 use serde::{Deserialize, Serialize};
 use typst::foundations::{fields_on, format_str, repr, Repr, StyleChain, Styles, Value};
 use typst::model::Document;
 use typst::syntax::ast::AstNode;
 use typst::syntax::{ast, is_id_continue, is_id_start, is_ident, LinkedNode, Source, SyntaxKind};
 use typst::text::RawElem;
-use typst::World;
 use typst_shim::{syntax::LinkedNodeExt, utils::hash128};
 use unscanny::Scanner;
 
@@ -1044,7 +1045,7 @@ impl<'a, 'w> CompletionContext<'a, 'w> {
     /// Add completions for all font families.
     fn font_completions(&mut self) {
         let equation = self.before_window(25).contains("equation");
-        for (family, iter) in self.world().clone().book().families() {
+        for (family, iter) in self.world().font_resolver.clone().font_book().families() {
             let detail = summarize_font_family(iter);
             if !equation || family.contains("Math") {
                 self.value_completion(
@@ -1059,8 +1060,12 @@ impl<'a, 'w> CompletionContext<'a, 'w> {
 
     /// Add completions for all available packages.
     fn package_completions(&mut self, all_versions: bool) {
-        let w = self.world().clone();
-        let mut packages: Vec<_> = w.packages().iter().map(|e| (&e.0, e.1.clone())).collect();
+        let registry = self.world().registry.clone();
+        let mut packages: Vec<_> = registry
+            .packages()
+            .iter()
+            .map(|e| (&e.0, e.1.clone()))
+            .collect();
         // local_packages to references and add them to the packages
         let local_packages_refs = self.ctx.local_packages();
         packages.extend(

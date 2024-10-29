@@ -200,7 +200,7 @@ impl LanguageState {
                 .ok_or_else(|| error_once!("cannot change entry"))
                 .map_err(z_internal_error)?;
 
-            let mut forked = snap.world.task(TaskInputs {
+            let mut forked = snap.world.snapshot_with(TaskInputs {
                 entry: Some(new_entry),
                 ..Default::default()
             });

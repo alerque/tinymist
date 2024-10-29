@@ -2,6 +2,7 @@
 
 use std::ops::Deref;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use base::TaskInputs;
 use lsp_server::RequestId;
@@ -561,7 +562,7 @@ impl LanguageState {
         let snap = handle.snapshot().map_err(z_internal_error)?;
         just_future(async move {
             let snap = snap.receive().await.map_err(z_internal_error)?;
-            let w = snap.world.as_ref();
+            let w = &snap.world;
 
             let symbols = handle
                 .run_analysis(w, |a| {
@@ -619,13 +620,13 @@ impl LanguageState {
             });
             let entry = entry.map_err(|e| internal_error(e.to_string()))?;
 
-            let w = &snap.world.task(TaskInputs {
+            let w = Arc::new(snap.world.snapshot_with(TaskInputs {
                 entry: Some(entry),
                 inputs: None,
-            });
+            }));
 
-            let res = handle.run_analysis(w, |a| {
-                tinymist_query::docs::package_docs(a, w, &info)
+            let res = handle.run_analysis(&w, |a| {
+                tinymist_query::docs::package_docs(a, &info)
                     .map_err(map_string_err("failed to generate docs"))
                     .map_err(z_internal_error)
             });
@@ -662,10 +663,10 @@ impl LanguageState {
             });
             let entry = entry.map_err(|e| internal_error(e.to_string()))?;
 
-            let w = snap.world.task(TaskInputs {
+            let w = Arc::new(snap.world.snapshot_with(TaskInputs {
                 entry: Some(entry),
                 inputs: None,
-            });
+            }));
 
             let res = handle.run_analysis(&w, |a| {
                 tinymist_query::docs::check_package(a, &info)

@@ -27,7 +27,7 @@ const ENV_PATH_SEP: char = if cfg!(windows) { ';' } else { ':' };
 
 /// Compiler feature for LSP universe and worlds without typst.ts to implement
 /// more for tinymist. type trait of [`TypstSystemWorld`].
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SystemCompilerFeatExtend;
 
 impl CompilerFeat for SystemCompilerFeatExtend {

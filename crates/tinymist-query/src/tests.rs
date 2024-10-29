@@ -61,7 +61,8 @@ pub fn run_with_ctx<T>(
         .map(|p| TypstFileId::new(None, VirtualPath::new(p.strip_prefix(&root).unwrap())))
         .collect::<Vec<_>>();
 
-    let mut ctx = Arc::new(Analysis::default()).snapshot(w.snapshot(), &());
+    let w = Arc::new(w.snapshot());
+    let mut ctx = Arc::new(Analysis::default()).snapshot(w, &());
     ctx.test_completion_files(Vec::new);
     ctx.test_files(|| paths);
     f(&mut ctx, p)

@@ -17,8 +17,8 @@ use reflexo_typst::{
     vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage, UpstreamUpdateEvent},
     watch_deps,
     world::{CompilerFeat, CompilerUniverse, CompilerWorld},
-    CompileEnv, CompileReport, Compiler, ConsoleDiagReporter, EntryReader, GenericExporter,
-    Revising, TaskInputs, TypstDocument, WorldDeps,
+    CompileEnv, CompileReport, Compiler, ConsoleDiagReporter, EntryManager, EntryReader,
+    GenericExporter, Revising, TaskInputs, TypstDocument, WorldDeps,
 };
 use typst::diag::{SourceDiagnostic, SourceResult, Warned};
 use typst_shim::utils::Deferred;
@@ -77,7 +77,7 @@ impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
                 }
             }
             if let Some(inputs) = &inputs.inputs {
-                if inputs.clone() != self.world.inputs() {
+                if inputs != self.world.inputs() {
                     break 'check_changed;
                 }
             }
@@ -85,7 +85,7 @@ impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
             return self;
         };
 
-        self.world = Arc::new(self.world.task(inputs));
+        self.world = Arc::new(self.world.snapshot_with(inputs));
         self.doc_state = Arc::new(OnceLock::new());
 
         self
@@ -451,7 +451,7 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileServerActor<F> {
             self.watch_feature_set.clone()
         });
         CompileSnapshot {
-            world: Arc::new(world.clone()),
+            world: Arc::new(world),
             env: env.clone(),
             flags: ExportSignal {
                 by_entry_update: reason.by_entry_update,
@@ -593,7 +593,7 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileServerActor<F> {
                 if self
                     .watch_snap
                     .get()
-                    .is_some_and(|e| e.world.revision() < *self.verse.revision.read())
+                    .is_some_and(|e| e.world.revision() < self.verse.revision())
                 {
                     self.watch_snap = OnceLock::new();
                 }
@@ -609,18 +609,16 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileServerActor<F> {
                 unreachable!()
             }
             Interrupt::ChangeTask(change) => {
-                self.verse.increment_revision(|verse| {
-                    if let Some(inputs) = change.inputs {
-                        verse.set_inputs(inputs);
-                    }
+                if let Some(inputs) = change.inputs {
+                    self.verse.set_inputs(inputs);
+                }
 
-                    if let Some(entry) = change.entry.clone() {
-                        let res = verse.mutate_entry(entry);
-                        if let Err(err) = res {
-                            log::error!("CompileServerActor: change entry error: {err:?}");
-                        }
+                if let Some(entry) = change.entry.clone() {
+                    let res = self.verse.mutate_entry(entry);
+                    if let Err(err) = res {
+                        log::error!("CompileServerActor: change entry error: {err:?}");
                     }
-                });
+                }
 
                 // After incrementing the revision
                 if let Some(entry) = change.entry {
@@ -628,7 +626,7 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileServerActor<F> {
                     if self.suspended {
                         log::info!("CompileServerActor: removing diag");
                         self.compile_handle
-                            .status(self.verse.revision.get_mut().get(), CompileReport::Suspend);
+                            .status(self.verse.revision().get(), CompileReport::Suspend);
                     }
 
                     // Reset the watch state and document state.

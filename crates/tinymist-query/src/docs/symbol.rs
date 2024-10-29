@@ -404,13 +404,11 @@ pub(crate) fn convert_docs(world: &LspWorld, content: &str) -> StrResult<EcoStri
     let entry = EntryState::new_rootless(conv_id.vpath().as_rooted_path().into()).unwrap();
     let entry = entry.select_in_workspace(*conv_id);
 
-    let mut w = world.task(TaskInputs {
+    let mut w = world.snapshot_with(TaskInputs {
         entry: Some(entry),
         inputs: None,
     });
     w.map_shadow_by_id(*conv_id, Bytes::from(content.as_bytes().to_owned()))?;
-    // todo: bad performance
-    w.source_db.take_state();
 
     let conv = typlite::Typlite::new(Arc::new(w))
         .with_library(DOCS_LIB.clone())

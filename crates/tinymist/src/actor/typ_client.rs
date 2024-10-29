@@ -125,7 +125,7 @@ impl CompileHandler {
 
     fn notify_diagnostics(
         &self,
-        world: &LspWorld,
+        world: &Arc<LspWorld>,
         errors: EcoVec<SourceDiagnostic>,
         warnings: EcoVec<SourceDiagnostic>,
     ) {
@@ -179,7 +179,7 @@ impl CompileHandler {
 
     pub fn run_analysis<T>(
         &self,
-        w: &LspWorld,
+        w: &Arc<LspWorld>,
         f: impl FnOnce(&mut AnalysisContext<'_>) -> T,
     ) -> anyhow::Result<T> {
         let Some(main) = w.main_id() else {

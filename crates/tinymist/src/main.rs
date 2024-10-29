@@ -211,10 +211,10 @@ pub fn trace_lsp_main(args: TraceLspArgs) -> anyhow::Result<()> {
         RUNTIMES.tokio_runtime.block_on(async {
             let snap = snap.receive().await.unwrap();
 
-            let w = snap.world.task(TaskInputs {
+            let w = Arc::new(snap.world.snapshot_with(TaskInputs {
                 entry: Some(entry),
                 inputs: Some(inputs),
-            });
+            }));
 
             UserActionTask::trace_main(client, state, &w, args.rpc_kind, req_id).await
         });

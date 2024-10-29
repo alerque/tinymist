@@ -62,7 +62,7 @@ impl Analysis {
     /// Get a snapshot of the analysis data.
     pub fn snapshot<'a>(
         &self,
-        world: LspWorld,
+        world: Arc<LspWorld>,
         resources: &'a dyn AnalysisResources,
     ) -> AnalysisContext<'a> {
         AnalysisContext::new(world, resources, self.clone())
@@ -154,7 +154,7 @@ impl<'w> Drop for AnalysisContext<'w> {
 
 impl<'w> AnalysisContext<'w> {
     /// Create a new analysis context.
-    pub fn new(world: LspWorld, resources: &'w dyn AnalysisResources, a: Analysis) -> Self {
+    pub fn new(world: Arc<LspWorld>, resources: &'w dyn AnalysisResources, a: Analysis) -> Self {
         let lifetime = a.caches.lifetime.fetch_add(1, Ordering::SeqCst);
         let slot = a.cache_grid.lock().find_revision(world.revision());
         Self {
@@ -396,7 +396,7 @@ pub struct SharedContext {
     /// The caches lifetime tick for analysis.
     pub lifetime: u64,
     /// Get the world surface for Typst compiler.
-    pub world: LspWorld,
+    pub world: Arc<LspWorld>,
     /// The analysis data
     pub analysis: Analysis,
     /// The revision slot

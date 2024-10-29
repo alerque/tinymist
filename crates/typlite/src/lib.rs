@@ -318,11 +318,10 @@ impl TypliteWorker {
         // let world = LiteWorld::new(main);
         let main_id = FileId::new(None, VirtualPath::new("__render__.typ"));
         let entry = self.world.entry_state().select_in_workspace(main_id);
-        let mut world = self.world.task(tinymist_world::base::TaskInputs {
+        let mut world = self.world.snapshot_with(tinymist_world::base::TaskInputs {
             entry: Some(entry),
             inputs: None,
         });
-        world.source_db.take_state();
         world.map_shadow_by_id(main_id, main).unwrap();
 
         let document = typst::compile(&world)
